@@ -140,7 +140,7 @@ int writeElement(const PDFObject *obj, std::ostream &f){
 	int i, length = 0;
 	int keylen, vlen;
 	char buff[64];
-	for(i=0; i<obj->nameSize; i++) {
+	for(i=0; i<obj->eleCount; i++) {
 		keylen = strlen(obj->elements[i].key);
 		vlen = strlen(obj->elements[i].value);
 		buff[0] = '/';

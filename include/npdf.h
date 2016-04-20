@@ -14,7 +14,7 @@
 #define INDIRECT 0x00000001
 #define ISUSED 0x00000002
 
-#define NONE 			0
+#define NAME 			0
 #define CATALOG 		1
 #define OUTLINES 		2
 #define PAGES 			3
@@ -25,6 +25,7 @@
 #define FONT 			8
 #define ARRAY 			9
 
+
 struct tagElement;
 typedef tagElement Element;
 
@@ -32,7 +33,7 @@ typedef struct tagObject{
 	int type;
 	
 	Element *elements;
-	short nameSize;
+	short eleCount;
 	
 	unsigned int offset;
 	int index;
