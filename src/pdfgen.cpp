@@ -9,7 +9,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "npdf.h"
+//#include <npdf.h>
+#include "../include/npdf.h"
 
 using namespace std;
 
@@ -17,6 +18,7 @@ int main(int argc, char **args) {
 	PDF pdf1;
 	Catalog *catalog;
 	Array *array;
+	Page *page;
 	init(pdf1, 1, 5);
 	PDFObject *objects;
 	
@@ -51,6 +53,15 @@ int main(int argc, char **args) {
 	objects[3].flags = INDIRECT;
 	objects[3].elements = NULL;
 	objects[3].eleCount = 0;
+	page = (Page*)malloc(sizeof(Page));
+	page->mediaBox.llx = 0;
+	page->mediaBox.lly = 0;
+	page->mediaBox.urx = 288;
+	page->mediaBox.ury = 500;
+	page->objects = NULL;
+	page->refCount = 0;
+	objects[3].data = page;
+
 	
 	objects[4].type = STREAM;
 	//objects[4].objType = XREF;
@@ -114,6 +125,9 @@ int main(int argc, char **args) {
 	//Release font object
 	free(font);
 	
+	//Release page object
+	free(page);
+
 	//Release Array object
 	free(array->elements);
 	free(array);

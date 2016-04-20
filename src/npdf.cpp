@@ -6,7 +6,8 @@
 #include <string.h>
 #include <iostream>
 #include <fstream>
-#include "npdf.h"
+//#include <npdf.h>
+#include "../include/npdf.h"
 
 void long2String(long n, char *str, int offset, int *l) {
 	int i, j, l2;
@@ -263,6 +264,7 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 		
 		//Write object's name elements
 		l = writeElement(obj, f);
+		length += l;
 
 		//object's content
 		switch (obj->type) {
