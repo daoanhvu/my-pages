@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #endif
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>
@@ -11,6 +12,7 @@
 
 void long2String(long n, char *str, int offset, int *l) {
 	int i, j, l2;
+	long tmpn;
 	char r;
 
 	if (n == 0) {
@@ -18,15 +20,15 @@ void long2String(long n, char *str, int offset, int *l) {
 		*l = 1;
 		return;
 	}
-
+	tmpn = n;
 	*l = 0;
-	while (n >0) {
-		r = (char)((n % 10) + 48);
+	while (tmpn >0) {
+		r = (char)((tmpn % 10) + 48);
 		str[offset + (*l)++] = r;
-		n = n / 10;
+		tmpn = tmpn / 10;
 	}
 	l2 = (*l) >> 1;
-	for (i = 0; i<l2; i++) {
+	for (i = 0; (i<l2) && (n>9) ; i++) {
 		r = str[offset + i];
 		j = offset + (*l) - i - 1;
 		str[i] = str[j];
@@ -36,6 +38,7 @@ void long2String(long n, char *str, int offset, int *l) {
 
 void int2String(int n, char *str, int offset, int *l) {
 	int i, j, l2;
+	int tmpn;
 	char r;
 
 	if (n == 0) {
@@ -44,11 +47,12 @@ void int2String(int n, char *str, int offset, int *l) {
 		return;
 	}
 
+	tmpn = n;
 	*l = 0;
-	while (n >0) {
-		r = (char)((n % 10) + 48);
+	while (tmpn >0) {
+		r = (char)((tmpn % 10) + 48);
 		str[offset + (*l)++] = r;
-		n = n / 10;
+		tmpn = tmpn / 10;
 	}
 	l2 = (*l) >> 1;
 	for (i = 0; (i<l2) && (n>9); i++) {
@@ -166,24 +170,43 @@ int writeElement(const PDFObject *obj, std::ostream &f){
 	return length;
 }
 
+void initObject(PDFObject *obj, int type) {
+	obj->type = type;
+	obj->gen_num = 0;
+	obj->index = 0;
+	obj->flags = ISUSED | INDIRECT;
+	obj->elements = NULL;
+	obj->eleCount = 0;
+	obj->data = NULL;
+}
+
+void releaseObj(PDFObject *){
+
+}
+
+
 void init(PDF &pdf, int major, int minor) {
 	pdf.major = major;
 	pdf.minor = minor;
-	pdf.objects = NULL;
-	pdf.object_length = 0;
+	pdf.list_objects = NULL;
+	pdf.listLogSize = 0;
+	pdf.listSize = 0;
 	pdf.start_xref_obj = 0;
 	pdf.rTable = NULL;
 	pdf.rTableLogSize = 0;
 	pdf.rTableSize = 0;
 
-	pdf.trailer.size = 0;
-	pdf.trailer.root = NULL;
+	pdf.rootIdx = -1;
 }
 
 void release(PDF &pdf) {
-	if (pdf.objects != NULL) {
-		free(pdf.objects);
-		pdf.objects = NULL;
+	int i;
+	if (pdf.list_objects != NULL) {
+		for(i = 0; i<pdf.listSize; i++) {
+			releaseObj(pdf.list_objects[i]);
+		}
+		free(pdf.list_objects);
+		pdf.list_objects = NULL;
 	}
 
 	if (pdf.rTable != NULL) {
@@ -200,8 +223,8 @@ return number of indirect objects
 int addXrefTable(PDF &pdf) {
 	PDFObject *obj;
 	int i, count = 0;
-	for (i = 0; i<pdf.object_length; i++) {
-		obj = &pdf.objects[i];
+	for (i = 0; i<pdf.listSize; i++) {
+		obj = pdf.list_objects[i];
 		//if this is an indirect object then we add it into xref table
 		if ((obj->flags & INDIRECT) == INDIRECT) {
 			//isUsed = ((obj->flags & ISUSED) == ISUSED)?'f':'n';
@@ -235,8 +258,8 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 	length = 10;
 
 	//write objects
-	for (i = 0; i<pdf.object_length; i++) {
-		obj = &(pdf.objects[i]);
+	for (i = 0; i<pdf.listSize; i++) {
+		obj = pdf.list_objects[i];
 
 		obj->offset = length;
 
@@ -354,6 +377,9 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 			l = writePageContent(page, f);
 			
 			break;
+
+		case XOBJECT:
+			break;
 		}
 
 		buff[0] = CLO;
@@ -388,7 +414,7 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 	length += l;
 
 	for (i = 0; i<pdf.rTableSize; i++) {
-		obj = &pdf.objects[pdf.rTable[i]];
+		obj = pdf.list_objects[pdf.rTable[i]];
 		isUsed = (obj->flags & ISUSED) == ISUSED ? 'f' : 'n';
 		memset(buff, '0', 18);
 		buff[10] = SP;
@@ -431,14 +457,14 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 	length += 2;
 
 	//Content of trailer
-	if (pdf.trailer.size > 0) {
+	if (pdf.listSize > 0) {
 		buff[0] = '/';
 		buff[1] = 'S';
 		buff[2] = 'i';
 		buff[3] = 'z';
 		buff[4] = 'e';
 		buff[5] = SP;
-		int2String(pdf.trailer.size, buff, 6, &l);
+		int2String(pdf.listSize, buff, 6, &l);
 		l += 6;
 		buff[l++] = SP;
 		f.write(buff, l);
@@ -452,10 +478,10 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 	buff[3] = 'o';
 	buff[4] = 't';
 	buff[5] = SP;
-	int2String(pdf.trailer.root->index, buff, 6, &l);
+	int2String(pdf.list_objects[pdf.rootIdx]->index, buff, 6, &l);
 	l += 6;
 	buff[l++] = SP;
-	int2String(pdf.trailer.root->gen_num, buff, l, &l1);
+	int2String(pdf.list_objects[pdf.rootIdx]->gen_num, buff, l, &l1);
 	l += l1;
 	buff[l++] = SP;
 	buff[l++] = 'R';

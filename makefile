@@ -3,8 +3,10 @@ AR=ar
 CFLAGS=-I./include
 src=src/npdf.cpp
 
+all: pdfgen.exe
+
 npdf.o: npdf.h npdf.cpp
-	$(CC) -c -g src/npdf.cpp $(CFLAGS)
+	$(CC) -c -g ./src/npdf.cpp $(CFLAGS)
 	
 libnpdf.a: npdf.o
 	$(AR) rsc libnpdf.a npdf.o

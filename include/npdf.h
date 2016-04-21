@@ -24,6 +24,7 @@
 #define TEXT 			7
 #define FONT 			8
 #define ARRAY 			9
+#define XOBJECT			10
 
 
 struct tagElement;
@@ -102,11 +103,6 @@ typedef struct tagXObject{
 	unsigned int stream_length;
 } XObject;
 
-typedef struct tagTrailer {
-	int size;
-	PDFObject *root;
-} Trailer;
-
 typedef struct tagFont{
 	char subtype[16];
 	char baseFont[32];
@@ -123,8 +119,11 @@ typedef struct tagPDF {
 	
 	char major;
 	char minor;
-	PDFObject *objects;
-	int object_length;
+
+	PDFObject **list_objects;
+	int listLogSize;
+	int listSize;
+
 	int start_xref_obj;
 	
 	//This array stored index of indirect objects in objects
@@ -132,10 +131,17 @@ typedef struct tagPDF {
 	int rTableLogSize;
 	int rTableSize;
 	
-	Trailer trailer;
+	/**
+	 * Trailer information
+	 *
+	 */
+	int rootIdx; //Index of the root object in array list_objects
+
 } PDF;
 
 void init(PDF &pdf, int major, int minor);
+void initObject(PDFObject *);
+void releaseObj(PDFObject *);
 void release(PDF &pdf);
 int addXrefTable(PDF &pdf);
 int writeDPF2File(const char *filename, const PDF &pdf);
