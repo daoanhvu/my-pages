@@ -63,13 +63,13 @@ void int2String(int n, char *str, int offset, int *l) {
 	}
 }
 
-void addXrefEntry(PDF *pdf, int index) {
+void addXrefEntry(PDF *pdf, int startindex, int count) {
 	if (pdf->rTableLogSize <= pdf->rTableSize) {
 		pdf->rTableLogSize += 4;
-		pdf->rTable = (int*)realloc(pdf->rTable, sizeof(int)*pdf->rTableLogSize);
+		pdf->rTable = (XRefElement*)realloc(pdf->rTable, sizeof(XRefElement)*pdf->rTableLogSize);
 	}
-	pdf->rTable[pdf->rTableSize] = index;
-	pdf->rTableSize++;
+	pdf->rTable[pdf->rTableSize].startIdx = startindex;
+	pdf->rTable[pdf->rTableSize].count = count;
 }
 
 void addRefSubobject(const PDFObject *obj, char *buff, int offs, int *len) {
@@ -170,6 +170,19 @@ int writeElement(const PDFObject *obj, std::ostream &f){
 	return length;
 }
 
+PDFObject* createObject() {
+	PDFObject *obj = (PDFObject*)malloc(sizeof(PDFObject));
+	obj->type = 0;
+	obj->gen_num = 0;
+	obj->index = 0;
+	obj->flags = 0;
+	obj->elements = NULL;
+	obj->eleCount = 0;
+	obj->data = NULL;
+
+	return obj;
+}
+
 void initObject(PDFObject *obj, int type) {
 	obj->type = type;
 	obj->gen_num = 0;
@@ -191,7 +204,6 @@ void init(PDF &pdf, int major, int minor) {
 	pdf.list_objects = NULL;
 	pdf.listLogSize = 0;
 	pdf.listSize = 0;
-	pdf.start_xref_obj = 0;
 	pdf.rTable = NULL;
 	pdf.rTableLogSize = 0;
 	pdf.rTableSize = 0;
@@ -220,25 +232,36 @@ void release(PDF &pdf) {
 /**
 return number of indirect objects
 */
-int addXrefTable(PDF &pdf) {
+void addXrefTable(PDF &pdf) {
 	PDFObject *obj;
 	int i, count = 0;
+	int start;
+	bool seen = false;
 	for (i = 0; i<pdf.listSize; i++) {
 		obj = pdf.list_objects[i];
 		//if this is an indirect object then we add it into xref table
 		if ((obj->flags & INDIRECT) == INDIRECT) {
-			//isUsed = ((obj->flags & ISUSED) == ISUSED)?'f':'n';
-			addXrefEntry(&pdf, i);
-			count++;
+			if(!seen) {
+				seen = true;
+				count = 1;
+				start = i;
+			} else {
+				count++;
+			}
+		} else {
+			seen = false;
+			if(count > 0) {
+				addXrefEntry(&pdf, start, count);
+				count = 0;
+			}
 		}
 	}
-	return count;
 }
 
 int writeDPF2File(const char *filename, const PDF &pdf) {
 	char buff[128];
 	char isUsed;
-	int i, j, l1, l, tmp, r;
+	int i, j, l1, l, tmp;
 	long xref_addr;
 	long length = 0;
 	PDFObject *obj;
@@ -404,43 +427,26 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 	length += 6;
 	xref_addr = length; //Save the offset of XRef table.
 	
-	int2String(pdf.start_xref_obj, buff, 0, &l);
-	buff[l++] = SP;
-	int2String(pdf.rTableSize, buff, l, &i);
-	l = l + i;
-	buff[l++] = CR;
-	buff[l++] = LF;
-	f.write(buff, l);
-	length += l;
-
+	XRefElement *xref;
+	int k;
+	char buff2[16];
 	for (i = 0; i<pdf.rTableSize; i++) {
-		obj = pdf.list_objects[pdf.rTable[i]];
-		isUsed = (obj->flags & ISUSED) == ISUSED ? 'f' : 'n';
-		memset(buff, '0', 18);
-		buff[10] = SP;
-		buff[16] = SP;
-		buff[17] = isUsed;
-		buff[18] = CR;
-		buff[19] = LF;
-		tmp = obj->offset;
-		j = 9;
-		while (tmp > 0) {
-			r = (tmp % 10) + 48;
-			tmp = tmp / 10;
-			buff[j] = r;
-			j--;
-		}
+		xref = &pdf.rTable[i];
+		l = sprintf(buff, "%d %d\r\n", xref->startIdx, xref->count);
+		f.write(buff, l);
+		length += l;
 
-		j = 15;
-		tmp = obj->gen_num;
-		while (tmp > 0) {
-			r = (tmp % 10) + 48;
-			tmp = tmp / 10;
-			buff[j] = r;
-			j--;
+		for(k=xref->startIdx; k<(xref->count + xref->startIdx); k++) {
+			obj = pdf.list_objects[k];
+			isUsed = (obj->flags & ISUSED) == ISUSED ? 'f' : 'n';
+			sprintf(buff, "0000000000 00000 %c\r\n", isUsed);
+			tmp = sprintf(buff2, "%d", obj->offset);
+			memcpy(buff + (10-tmp), buff2, tmp);
+			tmp = sprintf(buff2, "%d", obj->gen_num);
+			memcpy(buff + (16-tmp), buff2, tmp);
+			f.write(buff, 20);
+			length += 20;
 		}
-
-		f.write(buff, 20);
 	}
 	length += pdf.rTableSize * 20;
 

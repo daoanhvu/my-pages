@@ -19,14 +19,19 @@ int main(int argc, char **args) {
 	Catalog *catalog;
 	Array *array;
 	Page *page;
-	init(pdf1, 1, 5);
 	PDFObject *obj;
 	PDFObject **list;
+	int i;
+	init(pdf1, 1, 5);
 	
 	pdf1.listLogSize = 8;
-	list = (PDFObject**) malloc(sizeof(PDFObject*) * 8);
-	pdf1.listSize = 8;
+	list = (PDFObject**) malloc(sizeof(PDFObject*) * pdf1.listLogSize);
 	
+	pdf1.listSize = 8;
+	for(i=0; i<pdf1.listSize; i++) {
+		list[i] = createObject();
+	}
+
 	list[0]->type = CATALOG;
 	list[0]->gen_num = 0;
 	list[0]->index = 1;

@@ -111,6 +111,11 @@ typedef struct tagFont{
 	float size;
 } Font;
 
+typedef struct tagXRefElement {
+	int startIdx;
+	int count;
+} XRefElement;
+
 typedef struct tagPDF {
 	float marginLeft;
 	float marginTop;
@@ -124,10 +129,8 @@ typedef struct tagPDF {
 	int listLogSize;
 	int listSize;
 
-	int start_xref_obj;
-	
 	//This array stored index of indirect objects in objects
-	int *rTable;
+	XRefElement *rTable;
 	int rTableLogSize;
 	int rTableSize;
 	
@@ -140,9 +143,10 @@ typedef struct tagPDF {
 } PDF;
 
 void init(PDF &pdf, int major, int minor);
+PDFObject* createObject();
 void initObject(PDFObject *);
 void releaseObj(PDFObject *);
 void release(PDF &pdf);
-int addXrefTable(PDF &pdf);
+void addXrefTable(PDF &pdf);
 int writeDPF2File(const char *filename, const PDF &pdf);
 #endif
