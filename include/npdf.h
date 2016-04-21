@@ -30,6 +30,11 @@
 struct tagElement;
 typedef tagElement Element;
 
+typedef struct tagStream {
+	char *data;
+	int length;
+} Stream;
+
 typedef struct tagObject{
 	int type;
 	
@@ -41,6 +46,7 @@ typedef struct tagObject{
 	int gen_num;
 	int flags;
 	void *data;
+	Stream *stream;
 } PDFObject;
 
 //======= Common data structures ========================
@@ -51,9 +57,6 @@ typedef struct tagRectangle {
 	int ury;
 } Rectangle;
 //=======================================================
-
-
-//============================
 
 typedef struct tagCatalog {
 	PDFObject **refObjects;
@@ -85,11 +88,6 @@ typedef struct tagArray{
 	Element *elements;
 	int size;
 } Array;
-
-typedef struct tagStream {
-	char *data;
-	int length;
-} Stream;
 
 typedef struct tagPage {
 	PDFObject *parent;
@@ -148,5 +146,6 @@ void initObject(PDFObject *);
 void releaseObj(PDFObject *);
 void release(PDF &pdf);
 void addXrefTable(PDF &pdf);
+void addText(PDF &, char *str, int l, Font *f);
 int writeDPF2File(const char *filename, const PDF &pdf);
 #endif

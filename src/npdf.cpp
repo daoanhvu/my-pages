@@ -36,31 +36,8 @@ void long2String(long n, char *str, int offset, int *l) {
 	}
 }
 
-void int2String(int n, char *str, int offset, int *l) {
-	int i, j, l2;
-	int tmpn;
-	char r;
+void addText(PDF &, char *str, int l, Font *f) {
 
-	if (n == 0) {
-		str[offset] = 48;
-		*l = 1;
-		return;
-	}
-
-	tmpn = n;
-	*l = 0;
-	while (tmpn >0) {
-		r = (char)((tmpn % 10) + 48);
-		str[offset + (*l)++] = r;
-		tmpn = tmpn / 10;
-	}
-	l2 = (*l) >> 1;
-	for (i = 0; (i<l2) && (n>9); i++) {
-		r = str[i + offset];
-		j = offset + (*l) - i - 1;
-		str[i] = str[j];
-		str[j] = r;
-	}
 }
 
 void addXrefEntry(PDF *pdf, int startindex, int count) {
@@ -70,6 +47,7 @@ void addXrefEntry(PDF *pdf, int startindex, int count) {
 	}
 	pdf->rTable[pdf->rTableSize].startIdx = startindex;
 	pdf->rTable[pdf->rTableSize].count = count;
+	pdf->rTableSize++;
 }
 
 void addRefSubobject(const PDFObject *obj, char *buff, int offs, int *len) {
@@ -77,36 +55,26 @@ void addRefSubobject(const PDFObject *obj, char *buff, int offs, int *len) {
 	switch (obj->type) {
 	case OUTLINES:
 		buff[offs] = '/';
-		memcpy(buff + offs + 1, "Outlines", 8);
-		p = offs + 9;
-		buff[p++] = SP;
-
+		memcpy(buff + offs + 1, "Outlines ", 9);
+		p = offs + 10;
 		break;
 
 	case PAGES:
 		buff[offs] = '/';
-		memcpy(buff + offs + 1, "Pages", 5);
-		p = offs + 6;
-		buff[p++] = SP;
+		memcpy(buff + offs + 1, "Pages ", 6);
+		p = offs + 7;
 		break;
 	}
 
-	int2String(obj->index, buff, p, &l);
-	p += l;
-	buff[p] = SP;
-	p++;
-	int2String(obj->gen_num, buff, p, &l);
-	p += l;
-	buff[p++] = SP;
-	buff[p++] = 'R';
-	*len = p - offs;
+	l = sprintf(buff + p, "%d %d R", obj->index, obj->gen_num);
+	*len = p + l - offs;
 }
 
 /**
 	return length of the page in byte
 */
 int writePageContent(Page *page, std::ostream &out) {
-	int l1, l = 0;
+	int total = 0, l;
 	int i;
 	char buff[64];
 	
@@ -115,24 +83,17 @@ int writePageContent(Page *page, std::ostream &out) {
 	}
 	
 	//Write mediabox
-	memcpy(buff, "/MediaBox [", 11);
-	l = 11;
-	int2String(page->mediaBox.llx, buff, l, &l1);
-	l += l1;
-	buff[l++] = SP;
-	int2String(page->mediaBox.lly, buff, l, &l1);
-	l += l1;
-	buff[l++] = SP;
-	int2String(page->mediaBox.urx, buff, l, &l1);
-	l += l1;
-	buff[l++] = SP;
-	int2String(page->mediaBox.ury, buff, l, &l1);
-	l += l1;
-	buff[l++] = ']';
-	buff[l++] = CR;
-	buff[l++] = LF;
+	l = sprintf(buff, "/MediaBox [%d %d %d %d]\r\n", page->mediaBox.llx, page->mediaBox.lly,
+			page->mediaBox.urx, page->mediaBox.ury);
 	out.write(buff, l);
-	return l;
+	total += l;
+
+	//Write parent
+	l = sprintf(buff, "/Parent %d %d R\r\n", page->parent->index, page->parent->gen_num);
+	out.write(buff, l);
+	total += l;
+
+	return total;
 }
 
 /**
@@ -159,10 +120,8 @@ int writeElement(const PDFObject *obj, std::ostream &f){
 			f.write(buff, keylen + vlen + 5);
 			length += keylen + vlen + 5;
 		} else if(obj->elements[i].type == 2) {
-			int2String(obj->elements[i].iValue, buff, keylen + 2, &vlen);
-			buff[keylen + vlen + 2] = CR;
-			buff[keylen + vlen + 3] = LF;
-			length += keylen + vlen + 4;
+			vlen = sprintf(buff + (keylen + 2), "%d\r\n", obj->elements[i].iValue);
+			length += keylen + vlen + 2;
 		} else if(obj->elements[i].type == 3) {
 			
 		}
@@ -256,29 +215,31 @@ void addXrefTable(PDF &pdf) {
 			}
 		}
 	}
+
+	if(count > 0) {
+		addXrefEntry(&pdf, start, count);
+		count = 0;
+	}
 }
 
 int writeDPF2File(const char *filename, const PDF &pdf) {
 	char buff[128];
+	char buff2[16];
 	char isUsed;
-	int i, j, l1, l, tmp;
+	int i, j, l1, l, tmp, k;
 	long xref_addr;
 	long length = 0;
 	PDFObject *obj;
 	Catalog* catalog;
 	Page *page;
+	XRefElement *xref;
+
 	std::ofstream f(filename, std::ofstream::binary);
 
 	//write file header
-	memcpy(buff, "%PDF-", 5);
-	buff[5] = pdf.major + 48;
-	buff[6] = '.';
-	buff[7] = pdf.minor + 48;
-	buff[8] = CR;
-	buff[9] = LF;
-	f.write(buff, 10);
-
-	length = 10;
+	l = sprintf(buff, "%%PDF-%d.%d\r\n", pdf.major, pdf.minor);
+	f.write(buff, l);
+	length = l;
 
 	//write objects
 	for (i = 0; i<pdf.listSize; i++) {
@@ -286,27 +247,9 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 
 		obj->offset = length;
 
-		l = 0;
-		int2String(obj->index, buff, 0, &l1);
-		l += l1;
-		buff[l++] = SP;
-		//write generation number
-		int2String(obj->gen_num, buff, l, &l1);
-		l += l1;
-		buff[l++] = SP;
-		buff[l++] = 'o';
-		buff[l++] = 'b';
-		buff[l++] = 'j';
-		buff[l++] = CR;
-		buff[l++] = LF;
+		l = sprintf(buff, "%d %d obj\r\n<<", obj->index, obj->gen_num);
 		f.write(buff, l);
-
 		length += l;
-
-		buff[0] = OPN;
-		buff[1] = OPN;
-		f.write(buff, 2);
-		length += 2;
 		
 		//Write object's name elements
 		l = writeElement(obj, f);
@@ -314,20 +257,6 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 
 		//object's content
 		switch (obj->type) {
-		case STREAM: //CROSS REFERENCE STREAM Object
-			//write stream
-			memcpy(buff, "stream", 6);
-			buff[6] = CR;
-			buff[7] = LF;
-			f.write(buff, 8);
-			length += 8;
-
-			memcpy(buff, "endstream", 9);
-			buff[9] = CR;
-			buff[10] = LF;
-			f.write(buff, 11);
-			length += 11;
-			break;
 
 		case CATALOG:
 			buff[0] = '/';
@@ -368,37 +297,26 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 			break;
 
 		case PAGES:
-			buff[0] = '/';
-			buff[1] = 'T';
-			buff[2] = 'y';
-			buff[3] = 'p';
-			buff[4] = 'e';
-			buff[5] = SP;
-			buff[6] = '/';
-			memcpy(buff + 7, "Pages", 5);
-			buff[12] = CR;
-			buff[13] = LF;
+			memcpy(buff + 7, "/Type /Pages\r\n", 14);
 			f.write(buff, 14);
 			length += 14;
 			break;
 
 		case PAGE:
-			buff[0] = '/';
-			buff[1] = 'T';
-			buff[2] = 'y';
-			buff[3] = 'p';
-			buff[4] = 'e';
-			buff[5] = SP;
-			buff[6] = '/';
-			memcpy(buff + 7, "Page", 4);
-			buff[11] = CR;
-			buff[12] = LF;
+			memcpy(buff + 7, "/Type /Page\r\n", 13);
 			f.write(buff, 13);
 			length += 13;
 			
 			page = (Page*)obj->data;
 			l = writePageContent(page, f);
+			length += l;
 			
+			break;
+
+		case TEXT:
+			break;
+
+		case FONT:
 			break;
 
 		case XOBJECT:
@@ -411,10 +329,21 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 		buff[3] = LF;
 		f.write(buff, 4);
 		length += 4;
+
+		if(obj->stream != NULL) {
+			memcpy(buff, "stream\r\n", 8);
+			f.write(buff, 8);
+			length += 8;
+
+			//Stream content
+
+			memcpy(buff, "endstream\r\n", 11);
+			f.write(buff, 11);
+			length += 11;
+		}
+
 		//write endobj
-		memcpy(buff, "endobj", 6);
-		buff[6] = CR;
-		buff[7] = LF;
+		memcpy(buff, "endobj\r\n", 8);
 		f.write(buff, 8);
 		length += 8;
 	}
@@ -427,9 +356,6 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 	length += 6;
 	xref_addr = length; //Save the offset of XRef table.
 	
-	XRefElement *xref;
-	int k;
-	char buff2[16];
 	for (i = 0; i<pdf.rTableSize; i++) {
 		xref = &pdf.rTable[i];
 		l = sprintf(buff, "%d %d\r\n", xref->startIdx, xref->count);
@@ -448,7 +374,6 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 			length += 20;
 		}
 	}
-	length += pdf.rTableSize * 20;
 
 	//write trailer
 	memcpy(buff, "trailer", 7);
@@ -463,34 +388,14 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 	length += 2;
 
 	//Content of trailer
-	if (pdf.listSize > 0) {
-		buff[0] = '/';
-		buff[1] = 'S';
-		buff[2] = 'i';
-		buff[3] = 'z';
-		buff[4] = 'e';
-		buff[5] = SP;
-		int2String(pdf.listSize, buff, 6, &l);
-		l += 6;
-		buff[l++] = SP;
+	//if (pdf.listSize > 0) {
+		l = sprintf(buff, "/Size %d ", pdf.listSize);
 		f.write(buff, l);
 		length += l;
-	}
+	//}
 
 	//write root object
-	buff[0] = '/';
-	buff[1] = 'R';
-	buff[2] = 'o';
-	buff[3] = 'o';
-	buff[4] = 't';
-	buff[5] = SP;
-	int2String(pdf.list_objects[pdf.rootIdx]->index, buff, 6, &l);
-	l += 6;
-	buff[l++] = SP;
-	int2String(pdf.list_objects[pdf.rootIdx]->gen_num, buff, l, &l1);
-	l += l1;
-	buff[l++] = SP;
-	buff[l++] = 'R';
+	l = sprintf(buff, "/Root %d %d R", pdf.list_objects[pdf.rootIdx]->index, pdf.list_objects[pdf.rootIdx]->gen_num);
 	f.write(buff, l);
 	length += l;
 
@@ -504,28 +409,10 @@ int writeDPF2File(const char *filename, const PDF &pdf) {
 	length += 6;
 
 	//startxref
-	memcpy(buff, "startxref", 9);
-	buff[9] = CR;
-	buff[10] = LF;
-	f.write(buff, 11);
-	length += 11;
-
-	//Write offset of cross reference stream
-	long2String(xref_addr, buff, 0, &l);
+	l = sprintf(buff, "startxref\r\n%ld\r\n%%%%EOF", xref_addr);
 	f.write(buff, l);
 	length += l;
-
-	//write end-of-file marker
-	buff[0] = CR;
-	buff[1] = LF;
-	buff[2] = '%';
-	buff[3] = '%';
-	buff[4] = 'E';
-	buff[5] = 'O';
-	buff[6] = 'F';
-	f.write(buff, 7);
 	f.flush();
-	length += 7;
 	f.close();
 	return length;
 }

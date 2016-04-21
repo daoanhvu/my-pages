@@ -60,6 +60,7 @@ int main(int argc, char **args) {
 	list[3]->elements = NULL;
 	list[3]->eleCount = 0;
 	page = (Page*)malloc(sizeof(Page));
+	page->parent = list[2];
 	page->mediaBox.llx = 0;
 	page->mediaBox.lly = 0;
 	page->mediaBox.urx = 288;
@@ -68,9 +69,7 @@ int main(int argc, char **args) {
 	page->refCount = 0;
 	list[3]->data = page;
 
-	
 	list[4]->type = STREAM;
-	//list[4].objType = XREF;
 	list[4]->gen_num = 0;
 	list[4]->index = 5;
 	list[4]->flags = INDIRECT;
@@ -93,7 +92,7 @@ int main(int argc, char **args) {
 	list[6]->eleCount = 0;
 	Font *font = (Font*)malloc(sizeof(Font));
 	memcpy(font->name, "Helvetica", 9);
-	font->name[10] = 0;
+	font->name[9] = 0;
 	list[6]->data = font;
 	
 	list[7]->type = ARRAY;
