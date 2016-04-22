@@ -36,8 +36,28 @@ void long2String(long n, char *str, int offset, int *l) {
 	}
 }
 
-void addText(PDF &, char *str, int l, Font *f) {
+PDFObject* addText(PDF &pdf, int pageIdx, char *str, int l, Font *f) {
+	PDFObject *obj = (PDFObject*)malloc(sizeof(PDFObject));
+	obj->type = TEXT;
+	obj->gen_num = 0;
+	obj->flags = ISUSED | INDIRECT;
+	obj->elements = NULL;
+	obj->eleCount = 0;
+	obj->data = (char*)malloc(l);
+	memcpy(obj->data, str, l);
 
+	if(pdf.listSize >= pdf.listLogSize) {
+		pdf.listLogSize += 4;
+		pdf.list_objects = (PDFObject**)realloc(pdf.list_objects, sizeof(PDFObject*) * pdf.listLogSize);
+	}
+	obj->index = pdf.listSize;
+	pdf.list_objects[pdf.listSize++] = obj;
+
+	//Update page
+	PDFObject *pageObj = pdf.list_objects[pageIdx];
+
+
+	return obj;
 }
 
 void addXrefEntry(PDF *pdf, int startindex, int count) {
@@ -152,7 +172,7 @@ void initObject(PDFObject *obj, int type) {
 	obj->data = NULL;
 }
 
-void releaseObj(PDFObject *){
+void releaseObj(PDFObject *obj){
 
 }
 

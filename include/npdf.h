@@ -146,6 +146,6 @@ void initObject(PDFObject *);
 void releaseObj(PDFObject *);
 void release(PDF &pdf);
 void addXrefTable(PDF &pdf);
-void addText(PDF &, char *str, int l, Font *f);
+PDFObject* addText(PDF &pdf, int pageIdx, char *str, int l, Font *f);
 int writeDPF2File(const char *filename, const PDF &pdf);
 #endif
