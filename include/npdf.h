@@ -127,6 +127,10 @@ typedef struct tagPDF {
 	int listLogSize;
 	int listSize;
 
+	Page **pages;
+	int pageLogCount;
+	int pageCount;
+
 	//This array stored index of indirect objects in objects
 	XRefElement *rTable;
 	int rTableLogSize;
@@ -138,7 +142,7 @@ typedef struct tagPDF {
 	 */
 	int rootIdx; //Index of the root object in array list_objects
 
-} PDF;
+} PDF_;
 
 void init(PDF &pdf, int major, int minor);
 PDFObject* createObject();
