@@ -127,6 +127,8 @@ typedef struct tagPDF {
 	int listLogSize;
 	int listSize;
 
+	PDFObject *root;
+
 	Page **pages;
 	int pageLogCount;
 	int pageCount;
@@ -142,14 +144,14 @@ typedef struct tagPDF {
 	 */
 	int rootIdx; //Index of the root object in array list_objects
 
-} PDF_;
+} TPDF;
 
-void init(PDF &pdf, int major, int minor);
+void init(TPDF &pdf, int major, int minor);
 PDFObject* createObject();
 void initObject(PDFObject *);
 void releaseObj(PDFObject *);
-void release(PDF &pdf);
-void addXrefTable(PDF &pdf);
-PDFObject* addText(PDF &pdf, int pageIdx, char *str, int l, Font *f);
-int writeDPF2File(const char *filename, const PDF &pdf);
+void release(TPDF &pdf);
+void addXrefTable(TPDF &pdf);
+PDFObject* addText(TPDF &pdf, int pageIdx, char *str, int l, Font *f);
+int writeDPF2File(const char *filename, const TPDF &pdf);
 #endif

@@ -20,6 +20,8 @@ class PDF {
 		int listLogSize;
 		int listSize;
 
+		PDFObject *pageParent;
+
 		PDFObject *root;
 		Page **pages;
 		int pageLogCount;
@@ -30,13 +32,20 @@ class PDF {
 		int rTableLogSize;
 		int rTableSize;
 
+		long xref_addr;
+
+		int addObject(PDFObject *);
+		int addPage(Page *);
+		int readContent(std::istream &in, const char *inbuff, int offs, int len);
+
 	public:
 		PDF();
 		~PDF();
 		PDF(char majorV, char minorV);
 		void initBlankPDF();
 		void addPage();
-		void readFromFile(const char *filename);
+		int read(std::istream &in, char *msg);
+		int write(std::ostream &out);
 };
 
 #endif

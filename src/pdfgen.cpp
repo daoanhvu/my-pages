@@ -15,7 +15,7 @@
 using namespace std;
 
 int main(int argc, char **args) {
-	PDF pdf1;
+	TPDF pdf1;
 	Catalog *catalog;
 	Array *array;
 	Page *page;
@@ -114,7 +114,7 @@ int main(int argc, char **args) {
 	pdf1.list_objects = list;
 	
 	//point trailer root to Catalog object_length
-	pdf1.rootIdx = 0;
+	pdf1.root = list[0];
 	
 	//init Catalog
 	catalog = (Catalog*)malloc(sizeof(Catalog));
