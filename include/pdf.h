@@ -37,6 +37,8 @@ class PDF {
 		int addObject(PDFObject *);
 		int addPage(Page *);
 		int readContent(std::istream &in, const char *inbuff, int offs, int len);
+		void lexicalAnalysis(const char *, int len);
+		void parseObject();
 
 	public:
 		PDF();

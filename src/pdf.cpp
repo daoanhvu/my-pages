@@ -221,3 +221,24 @@ int PDF::write(std::ostream &out) {
 	out.flush();
 	return length;
 }
+
+void PDF::lexicalAnalysis(const char *bf, int len) {
+	int i = 0;
+
+	while(i<len) {
+		if(bf[i]>=48 && bf[i]<58) {
+
+		}
+	}
+}
+
+void PDF::parseObject() {
+	char bf[128];
+	int i = 0;
+
+	while(i<128) {
+		if(bf[i]>=48 && bf[i]<58) {
+
+		}
+	}
+}
