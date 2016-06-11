@@ -1,13 +1,41 @@
 #include "../include/lexer.h"
 #include "../include/common.h"
+#include <malloc.h>
 #include <string.h>
 #include <ctype.h>
 
-int addToken(int _type, const char *_text, char txtlen, int _col) {
+int addToken(int _type, const void *_data, char len, TokenList *tokens) {
+	PDFToken *token = (PDFToken*)malloc(sizeof(PDFToken));
+	token->type = _type;
+	switch(token->type) {
+		case INT:
+			token->data = malloc(sizeof(int));
+			memcpy(token->data, _data, sizeof(int));
+			token->dataLength = sizeof(int);
+			break;
 
+		case OCTET_STREAM:
+			token->data = malloc(len);
+			memcpy(token->data, _data, len);
+			token->dataLength = len;
+			break;
+
+		default:
+			token->data = NULL;
+			token->dataLength = 0;
+			break;
+	}
+
+	if(tokens->size <= tokens->logSize) {
+		tokens->logSize += 5;
+		tokens->list = realloc(tokens->list, tokens->logSize * sizeof(PDFToken*));
+	}
+	tokens->list[tokens->size] = token;
+	tokens->size++;
+	return 0;
 }
 
-int lexicalAnalysis(const char *bf, int len) {
+int lexicalAnalysis(const char *bf, int len, TokenList *list) {
 	int idx = 0;
 	int k;
 	int floatingPoint;
@@ -25,21 +53,21 @@ int lexicalAnalysis(const char *bf, int len) {
 						}
 						floatingPoint = 1; //TRUE;
 					} else {
-						addToken(NUMBER, bf + idx, k-idx, idx);
+						addToken(NUMBER, bf + idx, k-idx, list);
 						idx = k;
 						break;
 					}
 				}
 			}
 			if(idx < k) {
-				addToken(NUMBER, bf + idx, k-idx, idx);
+				addToken(NUMBER, bf + idx, k-idx, list);
 				idx = k;
 			}
 		} else if(bf[idx]==' ') {
-			addToken(SPACE, bf + idx, k-idx, idx);
+			addToken(SPACE, bf + idx, k-idx, list);
 			idx++;
 		} else if(bf[idx]=='\n') {
-			addToken(SPACE, bf + idx, k-idx, idx);
+			addToken(SPACE, bf + idx, k-idx, list);
 			idx++;
 		}
 	}
