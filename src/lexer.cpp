@@ -4,7 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 
-int addToken(int _type, const void *_data, char len, TokenList *tokens) {
+int addToken(int _type, const void *_data, int len, TokenList *tokens) {
 	PDFToken *token = (PDFToken*)malloc(sizeof(PDFToken));
 	token->type = _type;
 	switch(token->type) {
@@ -66,9 +66,24 @@ int lexicalAnalysis(const char *bf, int len, TokenList *list) {
 		} else if(bf[idx]==' ') {
 			addToken(SPACE, bf + idx, k-idx, list);
 			idx++;
-		} else if(bf[idx]=='\n') {
+		} else if(bf[idx]=='<') {
+			if(bf[idx+1]=='<') {
+
+			} else {
+
+			}
 			addToken(SPACE, bf + idx, k-idx, list);
 			idx++;
+		} else if(bf[idx]=='>') {
+			if(bf[idx+1]=='>') {
+			} else {
+			}
+		} else if(bf[idx]==0x0A) {
+			addToken(CODE_NEWLINE, bf + idx, k-idx, list);
+			idx++;
+		} else if( (bf[idx]==0x0D) && (bf[idx+1]==0x0A) ) {
+			addToken(CODE_NEWLINE, bf + idx, k-idx, list);
+			idx += 2;
 		}
 	}
 
