@@ -198,7 +198,7 @@ void init(TPDF &pdf, int major, int minor) {
 	pdf.root = 0;
 }
 
-void release(PDF &pdf) {
+void release(TPDF &pdf) {
 	int i;
 	if (pdf.list_objects != NULL) {
 		for(i = 0; i<pdf.listSize; i++) {

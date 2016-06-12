@@ -5,6 +5,7 @@ http://www.adobe.com/content/dam/Adobe/en/devnet/acrobat/pdfs/PDF32000_2008.pdf
 #define __PDF_H_
 
 #include "npdf.h"
+#include <iostream>
 
 class PDF {
 	private:
