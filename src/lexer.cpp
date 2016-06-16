@@ -54,10 +54,36 @@ int addToken(int _type, const void *_data, int len, TokenList *tokens) {
 	return 0;
 }
 
+/**
+ * @param: end - excluded end
+ */
+int readStream(const char * bf, int *start, int *end) {
+	int l = 0;
+	int i;
+	if(bf[l] == '\n' || bf[l] == 0x0A ) {
+		(*start)++;
+	} else if(bf[l] == 0x0D || bf[l] == 0x0A ) {
+		(*start) += 2;
+	}
+
+	i = (*start);
+
+	while( !(bf[i]=='e' && bf[i+1]=='n' && bf[i+2]=='d'
+			&& bf[i+3]=='s' && bf[i+4]=='t' && bf[i+5]=='r'
+					&& bf[i+6]=='e' && bf[i+7]=='a' && bf[i+8]=='m') ) {
+		i++;
+	}
+
+	(*end) = i;
+
+	return ( (*end) - (*start) );
+}
+
 int lexicalAnalysis(const char *bf, int len, TokenList *list) {
 	int idx = 0;
 	int k, intValue;
 	int floatingPoint;
+	int start, end;
 
 	while(idx<len) {
 		if(bf[idx]=='%') {
@@ -127,6 +153,15 @@ int lexicalAnalysis(const char *bf, int len, TokenList *list) {
 		} else if(bf[idx]=='o' && bf[idx+1]=='b' && bf[idx+2]=='j') {
 			addToken(OBJ_TEXT, NULL, 0, list);
 			idx += 3;
+		} else if(bf[idx]=='s' && bf[idx+1]=='t' && bf[idx+2]=='r'
+				&& bf[idx+3]=='e' && bf[idx+4]=='a' && bf[idx+5]=='m' ) {
+			addToken(STREAM_TEXT, NULL, 0, list);
+			idx += 6;
+			k = readStream(bf + idx, &start, &end);
+			if( k > 0 ) {
+				addToken(STREAM_DATA, bf + start, k, list);
+				idx += k;
+			}
 		} else if(bf[idx]=='e' && bf[idx+1]=='n' && bf[idx+2]=='d') {
 			if(bf[idx+3]=='o' && bf[idx+4]=='b' && bf[idx+5]=='j') {
 				addToken(ENDOBJ_TEXT, NULL, 0, list);
@@ -136,6 +171,17 @@ int lexicalAnalysis(const char *bf, int len, TokenList *list) {
 				addToken(ENDSTREAM_TEXT, NULL, 0, list);
 				idx += 9;
 			}
+		} else if(bf[idx]=='/') {
+			addToken(SLASH, NULL, 0, list);
+			idx++;
+			if(bf[idx]=='R' && bf[idx+1]=='o' && bf[idx+2]=='o' && bf[idx+3]=='t') {
+				addToken(NAME_ROOT, NULL, 0, list);
+			} else if(bf[idx]=='S' && bf[idx+1]=='i' && bf[idx+2]=='s' && bf[idx+3]=='e') {
+				addToken(NAME_SIZE, NULL, 0, list);
+			}
+		} else if(bf[idx]=='R' && isTrimmedChar(bf[idx+1]) ) {
+			addToken(R_TEXT, NULL, 0, list);
+			idx++;
 		} else if(bf[idx]==0x0A) {
 			addToken(CODE_NEWLINE, NULL, 0, list);
 			idx++;

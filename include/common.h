@@ -42,8 +42,20 @@
 #define ENDSTREAM_TEXT	113
 #define SLASH			114
 #define CODE_NEWLINE	115
-#define START_PDF		116
-#define END_OF_PDF		117
+#define R_TEXT			116
+#define NAME_SIZE		117
+#define NAME_TYPE		118
+#define NAME_LENGTH		119
+#define NAME_COUNT		120
+#define NAME_FONT		121
+#define NAME_ROOT		122
+#define NAME_PAGE		123
+#define NAME_MEDIABOX	124
+#define NAME_CATALOG	125
+#define NAME_OBJECT		126
+#define START_PDF		127
+#define END_OF_PDF		128
+#define STREAM_DATA		129
 
 #define SPACE 		0x20
 #define ERROR_PARSE_DOUBLE -1
@@ -64,5 +76,6 @@ typedef struct tagTokenList {
 
 int parseInt(const char *str, int len);
 double parseDouble(const char *str, int start, int end, int *error);
+int isTrimmedChar(char ch);
 
 #endif

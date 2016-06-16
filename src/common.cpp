@@ -55,3 +55,12 @@ double parseDouble(const char *str, int start, int end, int *error) {
 	(*error) = 0;
 	return val*negative;
 }
+
+int isTrimmedChar(char ch) {
+	int res = 0;
+
+	if( (ch==' ') || (ch=='\n') || (ch==0x0A) )
+		res = 1;
+
+	return res;
+}
