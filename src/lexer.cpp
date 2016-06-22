@@ -79,6 +79,31 @@ int readStream(const char * bf, int *start, int *end) {
 	return ( (*end) - (*start) );
 }
 
+int isAcommonName(const char * bf, int *length) {
+	int i, idx = 0;
+	int resType = -1;
+	if(bf[idx]=='R' && bf[idx+1]=='o' && bf[idx+2]=='o' && bf[idx+3]=='t') {
+		resType = NAME_ROOT;
+		*length = 4;
+	} else if(bf[idx]=='S' && bf[idx+1]=='i' && bf[idx+2]=='s' && bf[idx+3]=='e') {
+		resType = NAME_SIZE;
+		*length = 4;
+	} else if(bf[idx]=='L' && bf[idx+1]=='e' && bf[idx+2]=='n' && bf[idx+3]=='g'
+			&& bf[idx+4]=='t' && bf[idx+5]=='h' ) {
+		resType = NAME_LENGTH;
+		*length = 6;
+	} else {
+		i = 0;
+		while(!isTrimmedChar(bf[i])) {
+			i++;
+		}
+		*length = i;
+		resType = NAME_OBJECT;
+	}
+
+	return resType;
+}
+
 int lexicalAnalysis(const char *bf, int len, TokenList *list) {
 	int idx = 0;
 	int k, intValue;
@@ -174,10 +199,10 @@ int lexicalAnalysis(const char *bf, int len, TokenList *list) {
 		} else if(bf[idx]=='/') {
 			addToken(SLASH, NULL, 0, list);
 			idx++;
-			if(bf[idx]=='R' && bf[idx+1]=='o' && bf[idx+2]=='o' && bf[idx+3]=='t') {
-				addToken(NAME_ROOT, NULL, 0, list);
-			} else if(bf[idx]=='S' && bf[idx+1]=='i' && bf[idx+2]=='s' && bf[idx+3]=='e') {
-				addToken(NAME_SIZE, NULL, 0, list);
+			/** Here I used k as Type and start as length */
+			k = isAcommonName(bf+idx, &start);
+			if(k > 0) {
+				addToken(k, bf+idx, start, list);
 			}
 		} else if(bf[idx]=='R' && isTrimmedChar(bf[idx+1]) ) {
 			addToken(R_TEXT, NULL, 0, list);
